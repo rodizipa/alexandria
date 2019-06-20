@@ -53,47 +53,18 @@ class FunCog(commands.Cog):
     @commands.command(name='8ball')
     async def eight_ball(self, ctx):
         """Ask the great 8ball for answer."""
-
-        if ctx.message.channel.id == 167280538695106560 or ctx.message.channel.id == 360916876986941442:
-            await ctx.send(random.choice(quotes))
-        else:
-            await ctx.message.delete()
-            await ctx.author.send("My mystical ball only works on channels with rich magic like`i-am-bot`")
+        await ctx.send(random.choice(quotes))
 
     @commands.command(name='choose', aliases=['choice', 'pick'])
     async def choose(self, ctx, *, args):
         """Choose one or another args:<option> , <option2> [, <option3>...]"""
-        if ctx.message.channel.id == 167280538695106560 or ctx.message.channel.id == 360916876986941442:
-            split_message = args.split(',')
-            await ctx.send(random.choice(split_message))
-        else:
-            await ctx.message.delete()
-            await ctx.author.send("This command is locked to `i-am-bot`.")
-
-    @commands.command(name='coin', aliases=['flip'])
-    async def flip_coin(self,ctx):
-        """Flip a coin."""
-        em = await formatter.coin_embed(random.choice(coinFlip))
-        m = await ctx.send(embed=em)
-        await asyncio.sleep(8)
-        await ctx.message.delete()
-        await m.delete()
+        split_message = args.split(',')
+        await ctx.send(random.choice(split_message))
 
     @commands.command(name='slap')
     async def slap(self, ctx, mention: discord.Member):
         """Slap someone. args: <mention>"""
         em = Embed(description=ctx.author.display_name + " " + random.choice(slaps).format(mention.display_name))
-        await ctx.send(embed=em)
-        await ctx.message.delete()
-
-    @commands.command(name='gacha', aliases=['gatcha'])
-    async def gacha(self, ctx, *args):
-        """Chooses a random 5* that can be get from gacha. args: [wb]"""
-        if args:
-            if args[0] == 'wb':
-                em = Embed(description=ctx.author.display_name + " thinks that the world boss will be " + random.choice(world_bosses))
-        else:
-            em = Embed(description=ctx.author.display_name + " guessed " + random.choice(five_stars))
         await ctx.send(embed=em)
         await ctx.message.delete()
 
@@ -105,28 +76,24 @@ class FunCog(commands.Cog):
     @commands.guild_only()
     async def user_info(self, ctx, *args):
         """returns mentioned user info. Aliases: userinfo, info, ui, uinfo"""
-        if ctx.message.channel.id == 167280538695106560 or ctx.message.channel.id == 360916876986941442:
-            if args:
-                user = ctx.message.mentions[0]
-            else:
-                user = ctx.author
-
-            if user.avatar_url_as(static_format='png')[54:].startswith('a_'):
-                avi = user.avatar_url.rsplit("?", 1)[0]
-            else:
-                avi = user.avatar_url_as(static_format='png')
-
-            em = Embed(timestamp=ctx.message.created_at)
-            em.add_field(name='Nick', value=user.display_name, inline=False)
-            em.add_field(name='Account Created', value=user.created_at.__format__('%A, %d. %B %Y  %H:%M:%S'))
-            em.add_field(name='Join Date', value=user.joined_at.__format__('%A, %d. %B %Y  %H:%M:%S'))
-            em.set_thumbnail(url=avi)
-            em.set_footer(text=f'Invoked by: {ctx.author.display_name}')
-            await ctx.message.delete()
-            await ctx.send(embed=em)
+        if args:
+            user = ctx.message.mentions[0]
         else:
-            await ctx.message.delete()
-            await ctx.author.send("Don't use it outside of bot channel.")
+            user = ctx.author
+
+        if user.avatar_url_as(static_format='png')[54:].startswith('a_'):
+            avi = user.avatar_url.rsplit("?", 1)[0]
+        else:
+            avi = user.avatar_url_as(static_format='png')
+
+        em = Embed(timestamp=ctx.message.created_at)
+        em.add_field(name='Nick', value=user.display_name, inline=False)
+        em.add_field(name='Account Created', value=user.created_at.__format__('%A, %d. %B %Y  %H:%M:%S'))
+        em.add_field(name='Join Date', value=user.joined_at.__format__('%A, %d. %B %Y  %H:%M:%S'))
+        em.set_thumbnail(url=avi)
+        em.set_footer(text=f'Invoked by: {ctx.author.display_name}')
+        await ctx.message.delete()
+        await ctx.send(embed=em)
 
     @commands.command(name="poll", aliases=['p'])
     async def poll(self, ctx, *, msg):

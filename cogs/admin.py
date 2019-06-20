@@ -7,12 +7,13 @@ import pendulum
 
 def is_admin():
     async def predicate(ctx):
-        if ctx.author.id == ctx.bot.owner_id or ctx.author.id == 224522663626801152 or ctx.author.id == 308430990307753985:
+        if ctx.author.id == ctx.bot.owner_id or ctx.author.id == 224522663626801152:
             return True
         else:
             await ctx.author.send("You have no permissions.")
             await asyncio.sleep(1)
             await ctx.message.delete()
+            return False
 
     return commands.check(predicate)
 
@@ -73,7 +74,7 @@ class AdminCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(name='reload')
-    async def cog_reload(self, ctx, *, cog: str):
+    async def reload(self, ctx, *, cog: str):
         """Command to reload cog, admin only. Use path form"""
 
         try:
@@ -86,99 +87,6 @@ class AdminCog(commands.Cog):
             await asyncio.sleep(5)
             await m.delete()
             await ctx.message.delete()
-
-    @commands.command(name='assign')
-    async def assign(self, ctx, member: discord.Member, role: discord.Role, timestr):
-        if ctx.author.id in (224522663626801152, 114010253938524167):
-
-            if member is None:
-                ctx.send("Invalid Member.")
-            elif role is None:
-                ctx.send("Invalid role.")
-
-            time_list = [int(x) for x in timestr.split(':')]
-
-            time = pendulum.now()
-            if time_list[0] != 0:
-                time = time.add(hours=time_list[0])
-            if time_list[1] != 0:
-                time = time.add(minutes=time_list[1])
-
-            if not time:
-                ctx.send("Invalid time, use HH:MM format.")
-                return True
-
-            time = formatter.pendulum_to_datetime(time)
-            connection = await self.bot.db.acquire()
-
-            async with connection.transaction():
-                insert = "INSERT INTO assign_roles (user_id, role_id, guild_id, time) VALUES ($1, $2, $3, $4);"
-                await self.bot.db.execute(insert, member.id, role.id, ctx.message.guild.id, time)
-            await self.bot.db.release(connection)
-
-            await member.add_roles(role)
-            # Remove plankton if role is dunce
-            if role.id == 311943704237572097:
-                kr_role = discord.utils.get(ctx.guild.roles, id=295083791884615680)
-                gb_role = discord.utils.get(ctx.guild.roles, id=506160697323814927)
-                jp_role = discord.utils.get(ctx.guild.roles, id=505746159365783563)
-                await member.remove_roles(kr_role)
-                await member.remove_roles(gb_role)
-                await member.remove_roles(jp_role)
-
-            if role.id == 515972528016195644: #banish
-                for cache in member.roles:
-                    if not cache.name.__contains__('everyone') and not cache.name.__contains__('Banished'):
-                        await member.remove_roles(cache)
-
-            await ctx.message.add_reaction('✅')
-            await asyncio.sleep(5)
-            await ctx.message.delete()
-        else:
-            await ctx.message.delete()
-            await ctx.author.send("You have no right of using this cmd.")
-
-    @commands.command(name="deassign")
-    async def deassign(self, ctx, member: discord.Member):
-        if ctx.author.id in (224522663626801152, 114010253938524167):
-            if member is None:
-                ctx.send("Invalid Member.")
-                return True
-
-            row = await self.bot.db.fetchrow("select * from assign_roles where user_id = $1", member.id)
-
-            if row:
-                role_id = int(row['role_id'])
-                role = discord.utils.get(ctx.guild.roles, id=role_id)
-                await member.remove_roles(role)
-
-                connection = await self.bot.db.acquire()
-                async with connection.transaction():
-                    insert = "DELETE FROM assign_roles WHERE user_id = $1;"
-                    await self.bot.db.execute(insert, member.id)
-                await self.bot.db.release(connection)
-
-                await ctx.message.add_reaction('✅')
-                await asyncio.sleep(5)
-                await ctx.message.delete()
-
-    @commands.command(name="jailtime")
-    async def jailtime(self, ctx):
-        if ctx.message.mentions:
-            target = ctx.message.mentions[0]
-        else:
-            target = ctx.author
-
-        row = await self.bot.db.fetchrow("select * from assign_roles where user_id = $1", target.id)
-
-        if row:
-            jail_time = pendulum.instance(row['time'])
-            m = await ctx.send(embed=discord.Embed(description=f"Time left: {jail_time.diff().as_interval()}"))
-        else:
-            m = await ctx.send("User not found.")
-        await asyncio.sleep(10)
-        await ctx.message.delete()
-        await m.delete()
 
     @commands.is_owner()
     @commands.command(name="chslow")
@@ -235,6 +143,23 @@ class AdminCog(commands.Cog):
         await asyncio.sleep(1)
         await killmsg.delete()
         await msg.delete()
+
+    @commands.is_owner()
+    @commands.command(name="genuser")
+    async def genuser(self, ctx):
+        members = ctx.bot.server.members
+        connection = await ctx.bot.db.acquire()
+        await asyncio.sleep(1)
+        await ctx.message.delete()
+
+        for member in members:
+            async with connection.transaction():
+                await ctx.bot.db.execute("INSERT INTO users (user_id) VALUES($1);", member.id)
+                for role in member.roles:
+                    if not role.id == 538203428870946816:
+                        insert = "INSERT INTO roles (user_id, role_id) VALUES($1, $2);"
+                        await ctx.bot.db.execute(insert, member.id, role.id)
+        await ctx.bot.db.release(connection)
 
 
 def setup(bot):

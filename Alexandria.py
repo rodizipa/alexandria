@@ -5,7 +5,6 @@ import asyncpg
 from time import gmtime, strftime
 from utils import formatter
 import CONFIG
-import pendulum
 
 
 class Bot(commands.Bot):
@@ -13,63 +12,15 @@ class Bot(commands.Bot):
         super().__init__(command_prefix=CONFIG.PREFIX, description="LO server bot.")
         self.db = kwargs.pop("db")
         self.rt = self.loop.create_task(self.roles_management())
-        self.nick_pool = []
+        self.server = None
 
-    async def roles_management(self):
-
-        now = pendulum.now()
-
-        # Process role time assignment
-        role_time = await self.db.fetch("select * from assign_roles")
-
-        if role_time:
-            for item in role_time:
-                server = self.get_guild(int(item['guild_id']))
-
-                if server:
-                    member = server.get_member(item['user_id'])
-                else:
-                    member = None
-
-                check_time = pendulum.instance(item['time'])
-
-                if now > check_time:
-
-                    # remove role (assign plankton if dunce)
-                    if member:
-                        role = discord.utils.get(server.roles, id=item['role_id'])
-                        await member.remove_roles(role)
-
-                        if item['role_id'] == 311943704237572097:  # dunce
-                            # Assign kr role
-                            kr_role = discord.utils.get(server.roles, id=295083791884615680)
-                            await member.add_roles(kr_role)
-
-                        if item['role_id'] == 506160697323814927:  # NA
-                            kr_role = discord.utils.get(server.roles, id=295083791884615680)
-                            await member.add_roles(kr_role)
-
-                    # remove row
-                    connection = await self.db.acquire()
-                    async with connection.transaction():
-                        insert = "DELETE FROM assign_roles where user_id = $1;"
-                        await self.db.execute(insert, item['user_id'])
-                    await self.db.release(connection)
-
-                else:
-                    if member:
-                        # Assign role if user doesn't have the role (and remove plankton if dunce)
-                        role = discord.utils.get(member.roles, id=item['role_id'])
-
-                        if role is None:
-                            role = discord.utils.get(server.roles, id=item['role_id'])
-                            await member.add_roles(role)
-
-        await asyncio.sleep(60)
+    async def roles_management(self):  # background routine
+        pass
 
     async def on_ready(self):
         print(f'{self.user.name} online!')
         print('----')
+        self.server = self.get_guild(538203428870946816)
         await self.change_presence(activity=discord.Game('?help or Die!'))
 
     async def load_modules(self):
@@ -80,6 +31,51 @@ class Bot(commands.Bot):
 
     async def on_command_completion(self, ctx):
         print(f'[{strftime("[%d.%m.%Y %H:%M:%S]", gmtime())}] [Command] {ctx.message.content} by {ctx.author.name}')
+
+    async def on_member_join(self, member):  # Verify roles every time a user joins
+        # Check if user exists in db, if yes, reassign registered roles
+        query = "SELECT * FROM roles WHERE user_id = $1"
+        roles = await self.db.fetch(query, member.id)
+
+        if roles:
+            for role in roles:
+                await member.add_roles(discord.utils.get(self.server.roles, id=role['role_id']))
+
+    async def on_member_update(self, before, after):
+        # Track when user gets a role
+        if not before.roles == after.roles:
+            tmp = list(set(before.roles).symmetric_difference(after.roles))
+
+            if len(after.roles) > len(before.roles):
+                # If user exists
+                user_chk = await self.db.fetch("select * FROM users WHERE user_id = $1", before.id)
+
+                if user_chk:
+                    connection = await self.db.acquire()
+                    async with connection.transaction():
+                        for role in tmp:
+                            if not role.id == 538203428870946816:
+                                insert = "INSERT INTO roles (user_id, role_id) VALUES($1, $2);"
+                                await self.db.execute(insert, after.id, role.id)
+                    await self.db.release(connection)
+                else:
+                    connection = await self.db.acquire()
+                    async with connection.transaction():
+                        await self.db.execute("INSERT INTO users (user_id) VALUES($1);", after.id)
+                        for role in tmp:
+                            if not role.id == 538203428870946816:
+                                insert = "INSERT INTO roles (user_id, role_id) VALUES($1, $2);"
+                                await self.db.execute(insert, after.id, role.id)
+                    await self.db.release(connection)
+
+            # Track when user loses a role
+            else:
+                connection = await self.db.acquire()
+                async with connection.transaction():
+                    for role in tmp:
+                        delete = "DELETE FROM roles WHERE user_id = $1 AND role_id = $2;"
+                        await self.db.execute(delete, after.id, role.id)
+                await self.db.release(connection)
 
     async def on_message(self, message):
         if message.content.startswith('?'):
