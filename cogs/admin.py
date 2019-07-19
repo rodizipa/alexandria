@@ -24,8 +24,8 @@ class AdminCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.is_owner()
     @commands.command(name='role')
-    @is_admin()
     async def role(self, ctx, action, user: discord.Member, result_role: discord.Role):
         """Assign/remove roles to user."""
         if action == 'add':
