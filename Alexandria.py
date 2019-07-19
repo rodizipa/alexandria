@@ -24,7 +24,7 @@ class Bot(commands.Bot):
         await self.change_presence(activity=discord.Game('?help or Die!'))
 
     async def load_modules(self):
-        modules = ['cogs.admin', 'cogs.fun']
+        modules = ['cogs.admin', 'cogs.fun', 'cogs.dbstuff']
 
         for extension in modules:
             self.load_extension(extension)
