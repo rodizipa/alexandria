@@ -8,19 +8,19 @@ Bot for LO server management. Keep in mind this code is usually the older versio
     Discord.py 
     Asyncpg (use whatever you use for db, as long as it is asyncronous.)
     
-##Config file
+## Config file
 In order to use this bot you need to create a **CONFIG.py** file in project root folder.
 
-### Prefix
+#### Prefix
 Defines the prefix that the bot will recognize for cmds.
 
 `PREFIX = "?"`
 
 
-### Token
+#### Token
 `TOKEN = "Your bot token here"`
 
-### Database Config
+#### Database Config
 Basic database stuff, feel free to change. In this case, postgres.
 
 ```
