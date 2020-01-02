@@ -11,11 +11,7 @@ class Bot(commands.Bot):
     def __init__(self, **kwargs):
         super().__init__(command_prefix=CONFIG.PREFIX, description="LO server bot.")
         self.db = kwargs.pop("db")
-        self.rt = self.loop.create_task(self.roles_management())
         self.server = None
-
-    async def roles_management(self):  # background routine
-        pass
 
     async def on_ready(self):
         print(f'{self.user.name} online!')
