@@ -3,7 +3,7 @@ from discord import Embed
 import asyncio
 import pendulum
 from utils import formatter
-import datetime
+
 
 class DBStuff(commands.Cog):
     """Database related cmds"""
@@ -77,6 +77,7 @@ class DBStuff(commands.Cog):
                 await asyncio.sleep(5)
                 await ctx.message.delete()
                 await m.delete()
+
 
 def setup(bot):
     bot.add_cog(DBStuff(bot))
